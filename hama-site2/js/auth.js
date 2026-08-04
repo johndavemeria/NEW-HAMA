@@ -61,18 +61,35 @@ function buildDiscordAssetUrls(du) {
   return { avatar_url, banner_url };
 }
 
-// Runs once right after a fresh OAuth redirect: pulls the Discord
-// profile and claims / refreshes / creates the matching row in
-// public.profiles. Anyone can sign in — a brand-new account is
-// created as a 'pending' visitor and stays that way until a
-// founder/admin approves them from the Admin page.
+// Runs whenever we have a live Supabase session for the page. If a fresh
+// Discord provider_token came along with it (only ever true right after
+// the OAuth redirect), we pull the live Discord profile and claim /
+// refresh / create the matching row in public.profiles — this is also
+// what keeps display name, avatar, and banner in sync with Discord on
+// every sign-in. Anyone can sign in — a brand-new account is created as
+// a 'pending' visitor and stays that way until a founder/admin approves
+// them from the Admin page.
+//
+// If there's no provider_token (a normal restored session), or the live
+// Discord fetch fails for any reason (ad-blocker, brief API hiccup,
+// etc.), we fall back to whatever profile already exists for this user
+// instead of leaving them signed in with nothing showing.
 async function claimProfileFromSession(session) {
-  if (!session.provider_token) return; // no fresh Discord token this load
+  if (!session.provider_token) {
+    if (!currentProfile || currentProfile.user_id !== session.user.id) {
+      await loadOwnProfile(session.user.id);
+    }
+    return;
+  }
+
   let discordUser;
   try {
     discordUser = await fetchDiscordUser(session.provider_token);
   } catch (e) {
-    console.warn("Could not read Discord profile", e);
+    console.warn("Could not read live Discord profile, falling back to stored profile", e);
+    if (!currentProfile || currentProfile.user_id !== session.user.id) {
+      await loadOwnProfile(session.user.id);
+    }
     return;
   }
 
@@ -156,40 +173,44 @@ function renderHeaderAuthState() {
 }
 
 // Call this at the top of every page. Resolves once auth state is known.
+//
+// IMPORTANT: the onAuthStateChange listener is registered FIRST, before
+// anything else touches sb.auth. Supabase resolves the Discord OAuth
+// redirect (reads the tokens out of the URL, establishes the session)
+// as soon as the client exists, and fires that result as an
+// INITIAL_SESSION / SIGNED_IN event — the *only* place provider_token
+// is ever available. Calling sb.auth.getSession() first and attaching
+// this listener afterward (the old order) created a race: on a slower
+// or faster device, that event could fire and be missed entirely before
+// anyone was listening for it, silently dropping provider_token and
+// leaving the person signed in with no profile loaded. Registering the
+// listener up front and resolving initAuth() from inside it removes
+// that race completely.
 async function initAuth() {
   const cached = localStorage.getItem("hama_profile");
   if (cached) currentProfile = JSON.parse(cached);
 
-  const { data: { session } } = await sb.auth.getSession();
-  currentSession = session;
+  return new Promise((resolveInit) => {
+    let resolved = false;
 
-  if (session) {
-    if (session.provider_token) {
-      await claimProfileFromSession(session);
-    } else if (!currentProfile || currentProfile.user_id !== session.user.id) {
-      await loadOwnProfile(session.user.id);
-    }
-  } else {
-    currentProfile = null;
-    localStorage.removeItem("hama_profile");
-  }
+    sb.auth.onAuthStateChange(async (event, session) => {
+      currentSession = session;
 
-  renderHeaderAuthState();
+      if (event === "SIGNED_OUT" || !session) {
+        currentProfile = null;
+        localStorage.removeItem("hama_profile");
+      } else if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        await claimProfileFromSession(session);
+      }
 
-  sb.auth.onAuthStateChange(async (event, session) => {
-    currentSession = session;
-    if (event === "SIGNED_OUT") {
-      currentProfile = null;
-      localStorage.removeItem("hama_profile");
       renderHeaderAuthState();
-    }
-    if (event === "SIGNED_IN" && session) {
-      await claimProfileFromSession(session);
-      renderHeaderAuthState();
-    }
+
+      if (!resolved) {
+        resolved = true;
+        resolveInit({ session: currentSession, profile: currentProfile });
+      }
+    });
   });
-
-  return { session, profile: currentProfile };
 }
 
 // ------------------------------------------------------------------
