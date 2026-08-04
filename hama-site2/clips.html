@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Clips — Hama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="CSS/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="brand"><img src="CSS/img/logo.png" alt="Hama" class="brand-logo"></a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="explore.html">Explore</a>
+      <a href="family-tree.html">Family Tree</a>
+      <a href="clips.html" class="active">Clips</a>
+      <a href="admin.html" data-requires-staff style="display:none;">Admin</a>
+    </nav>
+    <div class="header-right" id="auth-slot"></div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-head">
+    <div class="eyebrow-btn">HIGHLIGHTS</div>
+    <h1>Family Clips</h1>
+    <p>Clips from the crew. Anyone can watch — only founders and admins can upload or remove one.</p>
+  </div>
+
+  <div id="upload-slot"></div>
+
+  <div class="clip-grid" id="clip-grid"></div>
+  <div class="empty-state" id="empty-state" style="display:none;">
+    <h3>No clips yet</h3>
+    <p>Check back later.</p>
+  </div>
+</div>
+
+<footer class="site-footer">Hama Family · FiveM roleplay community</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/media.js"></script>
+<script src="js/pages/clips.js"></script>
+</body>
+</html>
