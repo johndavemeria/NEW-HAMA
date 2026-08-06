@@ -14,13 +14,39 @@ function toast(msg, ms = 3200) {
   setTimeout(() => el.remove(), ms);
 }
 
+// Admin-page access + family-tree editing rights. This is deliberately
+// its own flag (is_admin) and NOT tied to the founder/admin role badge
+// — a profile can be badged "Founder" and still not have this, since
+// Admin access is meant for specific people only, not everyone with
+// that badge. Grant/revoke it per-person from the Admin page.
 function isStaff(profile) {
-  return !!profile && (profile.role === "founder" || profile.role === "admin");
+  return !!profile && profile.is_admin === true;
 }
 
 function discordAvatarFallback(discordId) {
   const idx = discordId ? Number(BigInt(discordId) % 5n) : 0;
   return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+}
+
+// A member's own custom_banner_url (GIF or any other image link, set
+// from their profile edit panel) always wins over their live Discord
+// banner_url — this is what lets someone with no Discord banner still
+// have one on the site, and lets anyone swap in something different.
+// Every place a banner is shown should read through this instead of
+// profile.banner_url directly.
+function effectiveBannerUrl(profile) {
+  if (!profile) return null;
+  return profile.custom_banner_url || profile.banner_url || null;
+}
+
+// Builds the pretty profile URL — /profile/<discord-username> — instead
+// of the old profile.html?id=<uuid>. Requires the host to rewrite
+// /profile/* to /profile.html (see README, "Pretty profile URLs");
+// profile.js then reads the username back out of the path. Falls back
+// to explore.html if we somehow don't have a username for this profile.
+function profileUrl(profile) {
+  if (!profile || !profile.discord_username) return "explore.html";
+  return `/profile/${encodeURIComponent(profile.discord_username)}`;
 }
 
 async function signInWithDiscord() {
@@ -149,7 +175,7 @@ function renderHeaderAuthState() {
 
   if (currentSession && currentProfile) {
     slot.innerHTML = `
-      <a href="profile.html?id=${currentProfile.id}" class="user-chip">
+      <a href="${profileUrl(currentProfile)}" class="user-chip">
         <img src="${currentProfile.avatar_url || discordAvatarFallback(currentProfile.discord_id)}" alt="">
         <span>${currentProfile.display_name}</span>
       </a>
@@ -254,7 +280,7 @@ function showHoverPreview(profile, x, y) {
   const el = getHoverPreviewEl();
   const avatar = profile.avatar_url || discordAvatarFallback(profile.discord_id);
   el.innerHTML = `
-    <div class="hp-banner" style="${profile.banner_url ? `background-image:url('${profile.banner_url}')` : "background:linear-gradient(135deg, var(--accent-soft), var(--surface-2))"}"></div>
+    <div class="hp-banner" style="${effectiveBannerUrl(profile) ? `background-image:url('${effectiveBannerUrl(profile)}')` : "background:linear-gradient(135deg, var(--accent-soft), var(--surface-2))"}"></div>
     <img class="hp-avatar" src="${avatar}" alt="">
     <div class="hp-name">${profile.display_name}</div>
     <div class="hp-handle">@${profile.discord_username}</div>
