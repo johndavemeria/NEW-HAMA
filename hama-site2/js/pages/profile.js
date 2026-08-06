@@ -43,22 +43,23 @@
     return `${yt}?autoplay=1&mute=1&loop=1&controls=0&playlist=${vid}`;
   }
 
-  // type is one of "auto" (guess from the URL), "gif", "youtube", or
-  // "video" (any direct mp4/webm/etc link). A GIF is an image, not a
-  // video file — rendering it in a <video> tag (the old behavior)
-  // silently shows nothing, which is why animated background choices
-  // never actually appeared. Picking "GIF" explicitly, or leaving it
-  // on Auto with a URL that ends in .gif, now renders it as an <img>
-  // instead so it animates like everywhere else on the site.
+  // type is one of "auto" (guess from the URL), "gif", "image" (a
+  // static picture), "youtube", or "video" (any direct mp4/webm/etc
+  // link). GIFs and plain pictures are both images, not video files —
+  // rendering them in a <video> tag (the old behavior) silently shows
+  // nothing, which is why animated/picture background choices never
+  // actually appeared. Picking "GIF" or "Picture" explicitly, or
+  // leaving it on Auto with a URL that looks like an image file, now
+  // renders it as an <img> instead.
   function mountBackgroundVideo(url, type) {
     if (!url) return;
     const wrap = document.createElement("div");
     wrap.className = "profile-bg-video-wrap";
-    const looksLikeGif = /\.gif(\?.*)?$/i.test(url);
+    const looksLikeImage = /\.(gif|jpe?g|png|webp|avif)(\?.*)?$/i.test(url);
     const yt = ytEmbedForBackground(url);
 
     let inner;
-    if (type === "gif" || (type === "auto" && looksLikeGif)) {
+    if (type === "gif" || type === "image" || (type === "auto" && looksLikeImage)) {
       inner = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
     } else if (type === "youtube" || (type === "auto" && yt)) {
       inner = yt
@@ -444,18 +445,19 @@
         <input type="file" id="edit-banner-file" accept="image/*" style="margin:6px 0;">
         <div class="editable-notice" style="margin-top:6px;">${profile.banner_url ? "You have a Discord banner — this overrides it when filled in." : "You don't have a Discord banner — set one here to have one on your profile."} Uploading a file takes priority over the link above.</div>
 
-        <label class="field-label">Background video type</label>
+        <label class="field-label">Background type</label>
         <select class="field" id="edit-bg-video-type">
           <option value="auto" ${(!profile.bg_video_type || profile.bg_video_type === "auto") ? "selected" : ""}>Auto-detect</option>
+          <option value="image" ${profile.bg_video_type === "image" ? "selected" : ""}>Picture</option>
           <option value="gif" ${profile.bg_video_type === "gif" ? "selected" : ""}>GIF</option>
           <option value="youtube" ${profile.bg_video_type === "youtube" ? "selected" : ""}>YouTube link</option>
           <option value="video" ${profile.bg_video_type === "video" ? "selected" : ""}>Video file link (mp4/webm/etc.)</option>
         </select>
-        <label class="field-label">Background video link</label>
+        <label class="field-label">Background link</label>
         <input type="text" class="field" id="edit-bg-video" value="${profile.bg_video_url || ""}" placeholder="https://...">
-        <label class="field-label" style="margin-top:8px;">…or upload a GIF/video file directly</label>
-        <input type="file" id="edit-bg-video-file" accept="video/*,image/gif" style="margin:6px 0;">
-        <div class="editable-notice" style="margin-top:6px;">Uploading a file takes priority over the link above, and the type is set automatically (GIF vs. video).</div>
+        <label class="field-label" style="margin-top:8px;">…or upload a picture, GIF, or video file directly</label>
+        <input type="file" id="edit-bg-video-file" accept="video/*,image/*" style="margin:6px 0;">
+        <div class="editable-notice" style="margin-top:6px;">Uploading a file takes priority over the link above, and the type is set automatically (picture vs. GIF vs. video).</div>
 
         <label class="field-label">Links</label>
         <div class="repeater" id="links-editor"></div>
@@ -541,7 +543,11 @@
         if (bgFile) {
           progress.textContent = "Uploading background…";
           bg_video_url = await uploadMediaFile(bgFile, "bg-video");
-          bg_video_type = bgFile.type === "image/gif" ? "gif" : "video";
+          bg_video_type = bgFile.type === "image/gif"
+            ? "gif"
+            : bgFile.type.startsWith("image/")
+              ? "image"
+              : "video";
         }
 
         progress.textContent = "Saving…";
