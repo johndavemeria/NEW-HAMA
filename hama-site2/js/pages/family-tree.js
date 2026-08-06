@@ -16,11 +16,13 @@
 
   let profiles = [];
 
-  // avatar_url / banner_url are already built by auth.js with the correct
-  // .gif extension for animated Discord assets — using them as-is here is
-  // what makes avatars/banners animate instead of showing a static frame.
+  // avatar_url is already built by auth.js with the correct .gif
+  // extension for animated Discord assets — using it as-is here is
+  // what makes avatars animate instead of showing a static frame.
+  // Banner goes through effectiveBannerUrl() so a member's own custom
+  // banner (set on their profile) takes priority over their Discord one.
   function avatarOf(p) { return p.avatar_url || `https://cdn.discordapp.com/embed/avatars/0.png`; }
-  function bannerOf(p) { return p.banner_url || null; }
+  function bannerOf(p) { return effectiveBannerUrl(p); }
 
   function ordinal(n) {
     if (n === 1) return "1st";
@@ -38,9 +40,16 @@
     return chips.join("");
   }
 
+  // Rendered as a div with a CSS background-image (same technique as
+  // the hover-preview banner), not an <img> — some browsers cap an
+  // <img>'s width via a responsive max-width reset, which was clipping
+  // the intentional bleed past the card's padding and cutting off the
+  // right edge of the banner.
   function bannerHtml(p, sizeClass) {
     const url = bannerOf(p);
-    return url ? `<img class="${sizeClass}" src="${url}" alt="">` : `<div class="${sizeClass} no-banner"></div>`;
+    return url
+      ? `<div class="${sizeClass}" style="background-image:url('${url}')"></div>`
+      : `<div class="${sizeClass} no-banner"></div>`;
   }
 
   async function loadAll() {
@@ -110,7 +119,7 @@
         <img class="avatar" src="${avatarOf(p)}" alt="">
         <div class="name">${p.display_name}</div>
         <div class="handle">@${p.discord_username}</div>
-        <a class="profile-link" href="profile.html?id=${p.id}">Profile ↗</a>
+        <a class="profile-link" href="${profileUrl(p)}">Profile ↗</a>
         ${removable ? `<br><button class="remove-x" data-remove-rel="${onRemove}">Remove</button>` : ""}
       </div>
     `;
@@ -145,7 +154,7 @@
           <div class="modal-head">
             <div>
               <h2>${root.display_name}'s Family</h2>
-              <p>${ordinal(root.generation)} Generation · <a class="profile-link" href="profile.html?id=${root.id}">View full profile ↗</a></p>
+              <p>${ordinal(root.generation)} Generation · <a class="profile-link" href="${profileUrl(root)}">View full profile ↗</a></p>
             </div>
             <button class="icon-btn" id="modal-close">✕</button>
           </div>
