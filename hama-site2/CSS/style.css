@@ -217,9 +217,9 @@ nav.main-nav a.active { color: var(--ink); border-color: var(--accent); }
 .member-card .name, .tree-card .name { font-weight: 700; font-size: 15px; }
 .member-card .handle, .tree-card .handle { color: var(--muted); font-size: 12.5px; margin: 2px 0 12px; }
 
-.tree-card-banner { height: 54px; width: calc(100% + 36px); margin: -22px -18px 14px; object-fit: cover; opacity: .55; }
+.tree-card-banner { height: 150px; width: calc(100% + 36px); margin: -22px -18px 16px; background-size: cover; background-position: center 30%; opacity: .7; }
 .tree-card-body { position: relative; }
-.no-banner { height: 54px; width: calc(100% + 36px); margin: -22px -18px 14px; background: linear-gradient(135deg, var(--surface-2), var(--surface)); }
+.no-banner { height: 150px; width: calc(100% + 36px); margin: -22px -18px 16px; background: linear-gradient(135deg, var(--surface-2), var(--surface)); }
 
 .badge-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
 .badge {
@@ -250,7 +250,7 @@ nav.main-nav a.active { color: var(--ink); border-color: var(--accent); }
 }
 .hover-preview-card.visible { opacity: 1; transform: translateY(0) scale(1); }
 .hover-preview-card .hp-banner {
-  height: 64px; margin: -16px -16px 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  height: 92px; margin: -16px -16px 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   background-size: cover; background-position: center; position: relative;
 }
 .hover-preview-card .hp-avatar {
@@ -326,7 +326,7 @@ nav.main-nav a.active { color: var(--ink); border-color: var(--accent); }
   background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px 16px 14px; text-align: center; width: 160px; overflow: hidden;
 }
-.mini-card-banner { height: 40px; width: calc(100% + 32px); margin: -16px -16px 10px; object-fit: cover; opacity: .5; }
+.mini-card-banner { height: 100px; width: calc(100% + 32px); margin: -16px -16px 12px; background-size: cover; background-position: center 30%; opacity: .65; }
 .mini-card .avatar { width: 56px; height: 56px; border-radius: var(--radius-sm); object-fit: cover; margin: 0 auto 10px; background: var(--surface); border: 1px solid var(--border); }
 .mini-card .name { font-weight: 700; font-size: 13.5px; }
 .mini-card .handle { color: var(--muted); font-size: 11.5px; margin: 1px 0 8px; }
