@@ -178,8 +178,31 @@
   async function deleteRow(id, tr) {
     const name = tr.querySelector(".admin-member .name").textContent;
     if (!confirm(`Remove ${name} from Hama entirely? This also removes them from the family tree and their highlights. This can't be undone.`)) return;
+
+    const member = allMembers.find(m => m.id === id);
+
+    // Gather every uploaded file this member's row — and everything
+    // that goes with it (highlights, uploaded music tracks) — points
+    // at, before the delete wipes the rows and we lose the URLs.
+    const [{ data: highlights }, { data: tracks }] = await Promise.all([
+      sb.from("profile_highlights").select("video_url").eq("profile_id", id),
+      sb.from("profile_music").select("url").eq("profile_id", id)
+    ]);
+
+    const filesToDelete = [
+      member?.custom_banner_url,
+      member?.bg_video_url,
+      ...(highlights || []).map(h => h.video_url),
+      ...(tracks || []).map(t => t.url)
+    ];
+
     const { error } = await sb.from("profiles").delete().eq("id", id);
     if (error) return toast("Could not remove: " + error.message, 5000);
+
+    // Rows are gone — now clear the matching files out of the "media"
+    // bucket so storage doesn't keep growing with orphaned uploads.
+    await deleteMediaFiles(filesToDelete);
+
     toast("Member removed.");
     await loadAll();
   }
