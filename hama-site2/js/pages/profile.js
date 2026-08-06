@@ -202,8 +202,12 @@
     document.querySelectorAll("[data-remove-highlight]").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!confirm("Remove this highlight?")) return;
+        const highlight = highlights.find(h => h.id === btn.dataset.removeHighlight);
         const { error: delErr } = await sb.from("profile_highlights").delete().eq("id", btn.dataset.removeHighlight);
         if (delErr) return toast("Could not remove: " + delErr.message, 4000);
+        // Also clear the uploaded file out of the "media" bucket (no-op
+        // if this highlight was a pasted link instead of an upload).
+        if (highlight) await deleteMediaFile(highlight.video_url);
         toast("Highlight removed.");
         await loadHighlights();
         document.getElementById("highlights-view").innerHTML = highlightsHtml();
@@ -270,6 +274,9 @@
         if (!confirm("Delete this track? This can't be undone.")) return;
         const { error: delErr } = await sb.from("profile_music").delete().eq("id", track.id);
         if (delErr) return toast("Could not delete: " + delErr.message, 5000);
+        // Music tracks are always uploads (there's no "paste a link"
+        // option for them), so this always clears real storage.
+        await deleteMediaFile(track.url);
         if (profile.bg_music_url === track.url) {
           await sb.from("profiles").update({ bg_music_url: null }).eq("id", profile.id);
           profile.bg_music_url = null;
@@ -419,6 +426,7 @@
             <input type="text" class="field" id="hl-url" placeholder="Video link (YouTube etc.)">
           </div>
           <input type="file" id="hl-file" accept="video/*" style="margin:10px 0;">
+          <div class="editable-notice" style="margin-top:-4px;margin-bottom:6px;">Uploaded video files must be 50MB or smaller — for anything bigger, paste a link instead.</div>
           <button class="btn btn-primary btn-sm" id="hl-upload-btn">Add highlight</button>
         ` : ""}
       </div>
@@ -496,6 +504,14 @@
       const progress = document.getElementById("save-progress");
       saveBtn.disabled = true;
 
+      // Remember what was there before, so that once the save succeeds
+      // we can clear out whichever uploaded file is no longer
+      // referenced anywhere (replaced with a different file/link, or
+      // the field was cleared entirely) — otherwise every re-upload
+      // just leaves the previous one behind in the bucket.
+      const oldBannerUrl = profile.custom_banner_url;
+      const oldBgVideoUrl = profile.bg_video_url;
+
       try {
         // Drop rows the member left blank rather than saving empty entries.
         const links = editLinks
@@ -534,6 +550,15 @@
           .eq("id", profile.id);
 
         if (updErr) { toast("Could not save: " + updErr.message, 5000); return; }
+
+        // Now that the new values are safely saved, clear out whatever
+        // old uploaded file they replaced (a fresh upload, a pasted
+        // link, or just clearing the field to remove it entirely all
+        // count as "replaced"). No-op for anything that was a pasted
+        // external link rather than an upload.
+        if (oldBannerUrl && oldBannerUrl !== custom_banner_url) await deleteMediaFile(oldBannerUrl);
+        if (oldBgVideoUrl && oldBgVideoUrl !== bg_video_url) await deleteMediaFile(oldBgVideoUrl);
+
         toast("Profile saved.");
         setTimeout(() => window.location.reload(), 800);
       } catch (e) {
@@ -590,6 +615,14 @@
       const file = document.getElementById("hl-file").files[0];
       if (!title) return toast("Give the highlight a title.", 4000);
       if (!file && !pastedUrl) return toast("Choose a video file or paste a link.", 4000);
+
+      // Highlights specifically are capped at 50MB when uploaded as a
+      // file — paste a link instead for anything bigger. This only
+      // applies here; Clips and other uploads are unaffected.
+      const HL_MAX_BYTES = 50 * 1024 * 1024;
+      if (file && file.size > HL_MAX_BYTES) {
+        return toast(`That file is ${(file.size / (1024 * 1024)).toFixed(1)}MB — highlight uploads are capped at 50MB. Paste a video link instead.`, 6000);
+      }
 
       const btn = document.getElementById("hl-upload-btn");
       btn.disabled = true;
