@@ -123,3 +123,4 @@
   renderUploadForm();
   await loadClips();
 })();
+
