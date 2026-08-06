@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Family Tree — Hama</title>
+<title>Hama — FiveM Community Profiles</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Manufacturing+Consent&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="CSS/style.css">
 </head>
 <body>
@@ -14,9 +15,9 @@
   <div class="container">
     <a href="index.html" class="brand"><img src="CSS/img/logo.png" alt="Hama" class="brand-logo"></a>
     <nav class="main-nav">
-      <a href="index.html">Home</a>
+      <a href="index.html" class="active">Home</a>
       <a href="explore.html">Explore</a>
-      <a href="family-tree.html" class="active">Family Tree</a>
+      <a href="family-tree.html">Family Tree</a>
       <a href="clips.html">Clips</a>
       <a href="admin.html" data-requires-staff style="display:none;">Admin</a>
     </nav>
@@ -24,34 +25,42 @@
   </div>
 </header>
 
-<div class="container">
-  <div class="page-head">
-    <div class="page-head-row">
-      <div>
-        <div class="eyebrow-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><path d="M6 3a3 3 0 1 1 0 6"/><circle cx="18" cy="18" r="3"/></svg> HAMA FAMILY</div>
-        <h1>Family Tree</h1>
-        <p>The Hama FiveM family lineage. Every card at every generation can be opened to see spouses, siblings, cousins, and children — only founders and admins can add or remove a relationship, at any generation.</p>
+<section class="hero">
+  <div class="container">
+    <div class="crest-mark"><img src="CSS/img/logo.png" alt="Hama"></div>
+    <div class="eyebrow"><span class="dot"></span> HAMA · FIVEM</div>
+    <h1 class="manufacturing-consent-regular">HAMA</h1>
+    <div class="tagline">FiveM community profiles</div>
+    <p class="sub">Browse member profiles, share your RP presets, and link up with the crew on Discord.</p>
+    <div class="actions">
+      <button class="btn btn-discord" id="hero-login-btn">Sign in with Discord</button>
+      <a href="explore.html" class="btn btn-ghost">Explore Members</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="num" id="stat-members">—</div>
+        <div class="label">Community Members</div>
       </div>
-      <button class="btn btn-discord" id="tree-login-btn" style="display:none;">Sign in to participate</button>
+      <div class="stat-card">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6 2.3-7.2-6-4.6h7.6z"/></svg>
+        </div>
+        <div class="num" id="stat-founders">—</div>
+        <div class="label">Founders</div>
+      </div>
     </div>
   </div>
-
-  <div class="stat-strip">
-    <div class="stat-card"><div class="num" id="stat-total">—</div><div class="label">Total Members</div></div>
-    <div class="stat-card"><div class="num" id="stat-gen1">—</div><div class="label">1st Generation</div></div>
-    <div class="stat-card"><div class="num" id="stat-gens">—</div><div class="label">Generations</div></div>
-  </div>
-
-  <div id="tree-sections"></div>
-</div>
-
-<div id="modal-root"></div>
+</section>
 
 <footer class="site-footer">Hama Family · FiveM roleplay community</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/pages/family-tree.js"></script>
+<script src="js/pages/home.js"></script>
 </body>
 </html>
