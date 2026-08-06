@@ -1,18 +1,26 @@
 (async function () {
   await initAuth();
 
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
   const layout = document.getElementById("profile-layout");
 
-  if (!id) {
-    layout.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>No profile selected</h3><p>Go back to <a href="explore.html">Explore</a>.</p></div>`;
+  // The host rewrites /profile/<discord-username> to this same file
+  // (see README, "Pretty profile URLs"), so on a normal visit the
+  // username is sitting in the path. Old bookmarked/shared links using
+  // profile.html?id=<uuid> still work as a fallback.
+  const pathMatch = window.location.pathname.match(/\/profile\/([^/?#]+)/i);
+  const username = pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+  const id = new URLSearchParams(window.location.search).get("id");
+
+  if (!username && !id) {
+    layout.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>No profile selected</h3><p>Go back to <a href="/explore.html">Explore</a>.</p></div>`;
     return;
   }
 
-  const { data: profile, error } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
+  const { data: profile, error } = username
+    ? await sb.from("profiles").select("*").ilike("discord_username", username).maybeSingle()
+    : await sb.from("profiles").select("*").eq("id", id).maybeSingle();
   if (error || !profile) {
-    layout.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Profile not found</h3><p>This member may not exist. <a href="explore.html">Back to Explore</a>.</p></div>`;
+    layout.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Profile not found</h3><p>This member may not exist. <a href="/explore.html">Back to Explore</a>.</p></div>`;
     return;
   }
 
@@ -21,8 +29,10 @@
   const avatar = profile.avatar_url || `https://cdn.discordapp.com/embed/avatars/0.png`;
   // banner_url / bg_video_url already carry a .gif or video extension when
   // Discord/the member reports an animated asset — a plain <img>/<video>
-  // renders that as live animation, same as static files.
-  const banner = profile.banner_url;
+  // renders that as live animation, same as static files. custom_banner_url
+  // (set on the member's own edit panel) takes priority over Discord's
+  // banner_url when both are present.
+  const banner = effectiveBannerUrl(profile);
 
   // ---------------- Background video ----------------
   function ytEmbedForBackground(url) {
@@ -33,17 +43,34 @@
     return `${yt}?autoplay=1&mute=1&loop=1&controls=0&playlist=${vid}`;
   }
 
-  function mountBackgroundVideo(url) {
+  // type is one of "auto" (guess from the URL), "gif", "youtube", or
+  // "video" (any direct mp4/webm/etc link). A GIF is an image, not a
+  // video file — rendering it in a <video> tag (the old behavior)
+  // silently shows nothing, which is why animated background choices
+  // never actually appeared. Picking "GIF" explicitly, or leaving it
+  // on Auto with a URL that ends in .gif, now renders it as an <img>
+  // instead so it animates like everywhere else on the site.
+  function mountBackgroundVideo(url, type) {
     if (!url) return;
     const wrap = document.createElement("div");
     wrap.className = "profile-bg-video-wrap";
+    const looksLikeGif = /\.gif(\?.*)?$/i.test(url);
     const yt = ytEmbedForBackground(url);
-    wrap.innerHTML = yt
-      ? `<iframe src="${yt}" allow="autoplay" style="width:100%;height:100%;border:0;"></iframe>`
-      : `<video src="${url}" autoplay muted loop playsinline></video>`;
+
+    let inner;
+    if (type === "gif" || (type === "auto" && looksLikeGif)) {
+      inner = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+    } else if (type === "youtube" || (type === "auto" && yt)) {
+      inner = yt
+        ? `<iframe src="${yt}" allow="autoplay" style="width:100%;height:100%;border:0;"></iframe>`
+        : `<video src="${url}" autoplay muted loop playsinline></video>`;
+    } else {
+      inner = `<video src="${url}" autoplay muted loop playsinline></video>`;
+    }
+    wrap.innerHTML = inner;
     document.body.prepend(wrap);
   }
-  mountBackgroundVideo(profile.bg_video_url);
+  mountBackgroundVideo(profile.bg_video_url, profile.bg_video_type || "auto");
 
   function ordinal(n) {
     if (n === 1) return "1st";
@@ -403,8 +430,24 @@
         <label class="field-label">Bio</label>
         <textarea class="field" id="edit-bio" rows="2">${profile.bio || ""}</textarea>
 
-        <label class="field-label">Background video (mp4/webm link, or a YouTube link)</label>
+        <label class="field-label">Banner image (GIF or any other image link)</label>
+        <input type="text" class="field" id="edit-banner" value="${profile.custom_banner_url || ""}" placeholder="https://... — leave blank to use your Discord banner">
+        <label class="field-label" style="margin-top:8px;">…or upload a GIF/image directly</label>
+        <input type="file" id="edit-banner-file" accept="image/*" style="margin:6px 0;">
+        <div class="editable-notice" style="margin-top:6px;">${profile.banner_url ? "You have a Discord banner — this overrides it when filled in." : "You don't have a Discord banner — set one here to have one on your profile."} Uploading a file takes priority over the link above.</div>
+
+        <label class="field-label">Background video type</label>
+        <select class="field" id="edit-bg-video-type">
+          <option value="auto" ${(!profile.bg_video_type || profile.bg_video_type === "auto") ? "selected" : ""}>Auto-detect</option>
+          <option value="gif" ${profile.bg_video_type === "gif" ? "selected" : ""}>GIF</option>
+          <option value="youtube" ${profile.bg_video_type === "youtube" ? "selected" : ""}>YouTube link</option>
+          <option value="video" ${profile.bg_video_type === "video" ? "selected" : ""}>Video file link (mp4/webm/etc.)</option>
+        </select>
+        <label class="field-label">Background video link</label>
         <input type="text" class="field" id="edit-bg-video" value="${profile.bg_video_url || ""}" placeholder="https://...">
+        <label class="field-label" style="margin-top:8px;">…or upload a GIF/video file directly</label>
+        <input type="file" id="edit-bg-video-file" accept="video/*,image/gif" style="margin:6px 0;">
+        <div class="editable-notice" style="margin-top:6px;">Uploading a file takes priority over the link above, and the type is set automatically (GIF vs. video).</div>
 
         <label class="field-label">Links</label>
         <div class="repeater" id="links-editor"></div>
@@ -414,8 +457,9 @@
         <div class="repeater" id="sections-editor"></div>
         <button type="button" class="btn btn-ghost btn-sm add-row-btn" id="add-section-btn">+ Add section</button>
 
-        <div style="margin-top:16px;display:flex;gap:10px;">
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px;">
           <button class="btn btn-primary btn-sm" id="save-btn">Save changes</button>
+          <span class="upload-progress" id="save-progress"></span>
         </div>
       </div>` : ""}
     </div>
@@ -448,29 +492,56 @@
     });
 
     document.getElementById("save-btn").addEventListener("click", async () => {
-      // Drop rows the member left blank rather than saving empty entries.
-      const links = editLinks
-        .map(l => ({ label: (l.label || "").trim(), url: (l.url || "").trim() }))
-        .filter(l => l.label || l.url);
-      const sections = editSections
-        .map(s => ({
-          title: (s.title || "").trim(),
-          items: (s.items || [])
-            .map(it => ({ label: (it.label || "").trim(), value: (it.value || "").trim() }))
-            .filter(it => it.label || it.value)
-        }))
-        .filter(s => s.title || s.items.length);
+      const saveBtn = document.getElementById("save-btn");
+      const progress = document.getElementById("save-progress");
+      saveBtn.disabled = true;
 
-      const bio = document.getElementById("edit-bio").value.trim();
-      const bg_video_url = document.getElementById("edit-bg-video").value.trim() || null;
+      try {
+        // Drop rows the member left blank rather than saving empty entries.
+        const links = editLinks
+          .map(l => ({ label: (l.label || "").trim(), url: (l.url || "").trim() }))
+          .filter(l => l.label || l.url);
+        const sections = editSections
+          .map(s => ({
+            title: (s.title || "").trim(),
+            items: (s.items || [])
+              .map(it => ({ label: (it.label || "").trim(), value: (it.value || "").trim() }))
+              .filter(it => it.label || it.value)
+          }))
+          .filter(s => s.title || s.items.length);
 
-      const { error: updErr } = await sb.from("profiles")
-        .update({ bio, links, sections, bg_video_url })
-        .eq("id", profile.id);
+        const bio = document.getElementById("edit-bio").value.trim();
 
-      if (updErr) return toast("Could not save: " + updErr.message, 5000);
-      toast("Profile saved.");
-      setTimeout(() => window.location.reload(), 800);
+        let custom_banner_url = document.getElementById("edit-banner").value.trim() || null;
+        const bannerFile = document.getElementById("edit-banner-file").files[0];
+        if (bannerFile) {
+          progress.textContent = "Uploading banner…";
+          custom_banner_url = await uploadMediaFile(bannerFile, "banners");
+        }
+
+        let bg_video_url = document.getElementById("edit-bg-video").value.trim() || null;
+        let bg_video_type = document.getElementById("edit-bg-video-type").value;
+        const bgFile = document.getElementById("edit-bg-video-file").files[0];
+        if (bgFile) {
+          progress.textContent = "Uploading background…";
+          bg_video_url = await uploadMediaFile(bgFile, "bg-video");
+          bg_video_type = bgFile.type === "image/gif" ? "gif" : "video";
+        }
+
+        progress.textContent = "Saving…";
+        const { error: updErr } = await sb.from("profiles")
+          .update({ bio, links, sections, custom_banner_url, bg_video_url, bg_video_type })
+          .eq("id", profile.id);
+
+        if (updErr) { toast("Could not save: " + updErr.message, 5000); return; }
+        toast("Profile saved.");
+        setTimeout(() => window.location.reload(), 800);
+      } catch (e) {
+        toast("Could not save: " + (e.message || e), 5000);
+      } finally {
+        saveBtn.disabled = false;
+        progress.textContent = "";
+      }
     });
 
     document.getElementById("music-upload-btn").addEventListener("click", async () => {
