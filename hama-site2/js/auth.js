@@ -64,7 +64,7 @@ async function signOut() {
   currentProfile = null;
   currentSession = null;
   localStorage.removeItem("hama_profile");
-  window.location.href = "index.html";
+  window.location.href = "/index.html";
 }
 
 // Pull fresh avatar/banner/username straight from Discord's API using
