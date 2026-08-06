@@ -32,7 +32,7 @@
           </div>
         </div>
         <div class="pending-actions">
-          <a class="btn btn-ghost btn-sm" href="profile.html?id=${m.id}">View</a>
+          <a class="btn btn-ghost btn-sm" href="${profileUrl(m)}">View</a>
           <button class="btn btn-primary btn-sm f-approve">Approve</button>
           <button class="btn btn-danger btn-sm f-deny">Deny</button>
         </div>
@@ -109,10 +109,11 @@
         </td>
         <td><input class="f-generation" type="number" min="1" max="20" value="${m.generation ?? ""}" placeholder="—"></td>
         <td style="text-align:center;"><input class="f-root" type="checkbox" ${m.is_root ? "checked" : ""}></td>
+        <td style="text-align:center;"><input class="f-admin" type="checkbox" ${m.is_admin ? "checked" : ""} title="Can open the Admin page and edit the family tree — independent of their Role/Badge."></td>
         <td>
           <div class="admin-row-actions">
             <button class="btn btn-ghost btn-sm f-save">Save</button>
-            <a class="btn btn-ghost btn-sm" href="profile.html?id=${m.id}">View</a>
+            <a class="btn btn-ghost btn-sm" href="${profileUrl(m)}">View</a>
             <button class="btn btn-danger btn-sm f-delete">Remove</button>
           </div>
         </td>
@@ -133,6 +134,7 @@
               <th>Badge</th>
               <th>Generation</th>
               <th>Root</th>
+              <th>Admin&nbsp;Access</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -158,13 +160,14 @@
     const genRaw = tr.querySelector(".f-generation").value;
     const generation = genRaw === "" ? null : parseInt(genRaw, 10);
     const is_root = tr.querySelector(".f-root").checked;
+    const is_admin = tr.querySelector(".f-admin").checked;
 
-    if (currentProfile.id === id && role !== "founder" && role !== "admin") {
-      if (!confirm("This removes your own founder/admin access. Continue?")) return;
+    if (currentProfile.id === id && currentProfile.is_admin && !is_admin) {
+      if (!confirm("This removes your own Admin access — you'll lose access to this page immediately. Continue?")) return;
     }
 
     const { error } = await sb.from("profiles")
-      .update({ status, role, badge, generation, is_root })
+      .update({ status, role, badge, generation, is_root, is_admin })
       .eq("id", id);
 
     if (error) return toast("Could not save: " + error.message, 5000);
@@ -197,6 +200,7 @@
           <div class="section-label">All members</div>
           <div class="search-bar" style="margin-bottom:0;min-width:240px;"><input type="text" id="admin-search" placeholder="Search by name or @handle…"></div>
         </div>
+        <p style="color:var(--muted);font-size:12px;margin:-6px 0 12px;">Role/Badge is just what shows on a profile. <b>Admin Access</b> is the only thing that unlocks this page and family-tree editing — check it for whoever actually needs it, regardless of their Role.</p>
         <div id="table-wrap"></div>
       </div>
     `;
