@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Profile — Hama</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 <header class="site-header">
   <div class="container">
     <a href="/index.html" class="brand"><img src="/CSS/img/logo.png" alt="Hama" class="brand-logo"></a>
-    <nav class="main-nav">
+    <nav class="main-nav" id="main-nav">
       <a href="/index.html">Home</a>
       <a href="/explore.html">Explore</a>
       <a href="/family-tree.html">Family Tree</a>
@@ -21,6 +21,7 @@
       <a href="/admin.html" data-requires-staff style="display:none;">Admin</a>
     </nav>
     <div class="header-right" id="auth-slot"></div>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="main-nav"><span></span><span></span><span></span></button>
   </div>
 </header>
 
