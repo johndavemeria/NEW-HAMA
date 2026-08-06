@@ -47,7 +47,7 @@
     }
     empty.style.display = "none";
     grid.innerHTML = filtered.map(m => `
-      <a class="member-card" href="profile.html?id=${m.id}" data-id="${m.id}">
+      <a class="member-card" href="${profileUrl(m)}" data-id="${m.id}">
         <img class="avatar" src="${m.avatar_url || `https://cdn.discordapp.com/embed/avatars/0.png`}" alt="">
         <div class="name">${m.display_name}</div>
         <div class="handle">@${m.discord_username}</div>
