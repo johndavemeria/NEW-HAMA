@@ -37,3 +37,4 @@ function renderVideoEmbed(url) {
   }
   return `<video src="${url}" controls preload="metadata"></video>`;
 }
+
