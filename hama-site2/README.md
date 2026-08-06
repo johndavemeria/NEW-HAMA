@@ -141,3 +141,4 @@ Static site, no build step:
   friendlier form UI later if you want something more polished.
 - If a founder demotes their own account, the Admin page warns first
   since it would lock them out immediately.
+
