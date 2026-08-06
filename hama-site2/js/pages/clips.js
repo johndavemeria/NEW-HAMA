@@ -104,8 +104,13 @@
       grid.querySelectorAll("[data-remove]").forEach(btn => {
         btn.addEventListener("click", async () => {
           if (!confirm("Remove this clip? This can't be undone.")) return;
+          const clip = clips.find(c => c.id === btn.dataset.remove);
           const { error } = await sb.from("family_clips").delete().eq("id", btn.dataset.remove);
           if (error) return toast("Could not remove: " + error.message, 5000);
+          // Clip removed from the DB — also clear the uploaded file out
+          // of the "media" bucket (no-op if it was a pasted link, e.g.
+          // YouTube, instead of an upload) so storage doesn't fill up.
+          if (clip) await deleteMediaFile(clip.video_url);
           toast("Clip removed.");
           await loadClips();
         });
