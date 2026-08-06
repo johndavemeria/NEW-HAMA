@@ -318,3 +318,45 @@ function attachHoverPreview(el, profile) {
     hideHoverPreview();
   });
 }
+
+// ------------------------------------------------------------------
+// Mobile nav (hamburger). Every page's header includes the same
+// #nav-toggle button + #main-nav — this wires the open/close behavior
+// once, on script load, since auth.js is on every page and the header
+// markup is already in the DOM by the time this runs (script tags sit
+// at the bottom of <body>).
+// ------------------------------------------------------------------
+(function setupMobileNav() {
+  const toggle = document.getElementById("nav-toggle");
+  const nav = document.getElementById("main-nav");
+  if (!toggle || !nav) return;
+
+  function setOpen(open) {
+    nav.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  toggle.addEventListener("click", () => setOpen(!nav.classList.contains("open")));
+
+  // Tapping a link closes the menu instead of leaving it open behind
+  // the page you just navigated to.
+  nav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => setOpen(false)));
+
+  // Tapping anywhere outside the open menu closes it.
+  document.addEventListener("click", (e) => {
+    if (nav.classList.contains("open") && !nav.contains(e.target) && !toggle.contains(e.target)) {
+      setOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setOpen(false);
+  });
+
+  // If the window is resized/rotated past the point where the hamburger
+  // would hide again (e.g. iPad rotated to landscape), make sure the
+  // dropdown state doesn't linger.
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 900) setOpen(false);
+  });
+})();
